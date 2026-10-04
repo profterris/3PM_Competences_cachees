@@ -1,0 +1,951 @@
+<title>Compétences cachées</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout : une étape à la fois, barre de progression collante, consigne en ticket d'atelier, défis bonus repliables. */
+:root{
+  --paper:#EEF1F4; --card:#FFFFFF; --ink:#17212C; --muted:#586473; --line:#D3DAE2;
+  --accent:#D9530A; --accent-ink:#FFFFFF; --accent-soft:#FCE9DC;
+  --ok:#11795A; --ok-soft:#DCF2E8; --ko:#BF3526; --ko-soft:#FBE2DE;
+  --info:#2D67A6; --info-soft:#E1ECF8; --hl:#FFE38C; --hl-ink:#17212C;
+  --f-display:"Bricolage Grotesque", "Arial Black", system-ui, sans-serif;
+  --f-body:"Atkinson Hyperlegible", Verdana, system-ui, sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --paper:#0F151C; --card:#17202A; --ink:#E7ECF1; --muted:#9AA7B5; --line:#2A3642;
+  --accent:#FF7B35; --accent-ink:#1B0D04; --accent-soft:#3A2214;
+  --ok:#3CC892; --ok-soft:#113428; --ko:#FF7D6C; --ko-soft:#3C1D18;
+  --info:#7EB3EE; --info-soft:#15283D; --hl:#5E4C10; --hl-ink:#FFF3CC; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --paper:#0F151C; --card:#17202A; --ink:#E7ECF1; --muted:#9AA7B5; --line:#2A3642;
+  --accent:#FF7B35; --accent-ink:#1B0D04; --accent-soft:#3A2214;
+  --ok:#3CC892; --ok-soft:#113428; --ko:#FF7D6C; --ko-soft:#3C1D18;
+  --info:#7EB3EE; --info-soft:#15283D; --hl:#5E4C10; --hl-ink:#FFF3CC; color-scheme:dark }
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:17px;line-height:1.55}
+.wrap{max-width:860px;margin:0 auto;padding-inline:16px;padding-block:0 80px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;line-height:1.15;margin:0}
+h2{font-size:clamp(26px,5vw,36px);font-weight:800}
+h3{font-size:20px;font-weight:600}
+p{margin:0}
+a{color:var(--info)}
+mark{background:var(--hl);color:var(--hl-ink);padding:0 3px;border-radius:3px}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--info);outline-offset:2px}
+
+/* barre haute */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:10;background:var(--card);border-bottom:1px solid var(--line)}
+.bar-in{max-width:860px;margin:0 auto;padding:10px 16px;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center}
+.brand{font-family:var(--f-display);font-weight:800;font-size:18px;letter-spacing:-.01em}
+.brand span{color:var(--accent)}
+.who{font-family:var(--f-mono);font-size:13px;color:var(--muted)}
+.pts{margin-left:auto;font-family:var(--f-mono);font-weight:700;font-size:15px;background:var(--accent);color:var(--accent-ink);padding:4px 10px;border-radius:999px;font-variant-numeric:tabular-nums}
+.resetbtn{border:1px solid var(--line);background:var(--card);border-radius:8px;padding:5px 10px;font-size:13px;cursor:pointer;font-family:var(--f-mono)}
+.resetbox{max-width:860px;margin:0 auto;padding:0 16px 12px;display:grid;gap:10px}
+.prog{flex-basis:100%;height:6px;background:var(--line);border-radius:6px;overflow:hidden}
+.prog i{display:block;height:100%;width:0;background:var(--accent);transition:width .4s}
+.nav{display:flex;gap:6px;overflow-x:auto;padding:10px 0 4px;scrollbar-width:thin}
+.nav button{flex:0 0 auto;min-width:38px;height:34px;border-radius:8px;border:1px solid var(--line);background:var(--card);font-family:var(--f-mono);font-size:13px;cursor:pointer}
+.nav button.done{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+.nav button.cur{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.nav button:disabled{opacity:.4;cursor:not-allowed}
+.nav button.pause{font-size:12px}
+
+.rule{margin:18px 0 0;padding:12px 14px;border:1px dashed var(--accent);border-radius:var(--r);background:var(--accent-soft);font-size:15px}
+
+/* étape */
+.step{margin-top:22px;display:grid;gap:18px}
+.step-head{display:grid;gap:6px}
+.meta{font-family:var(--f-mono);font-size:13px;color:var(--muted);display:flex;flex-wrap:wrap;gap:6px 14px}
+.meta b{color:var(--accent)}
+.ticket{position:relative;background:var(--card);border:2px solid var(--ink);border-radius:var(--r);padding:14px 16px 14px 48px}
+.ticket::before{content:"";position:absolute;left:16px;top:18px;width:14px;height:14px;border-radius:50%;border:2px solid var(--ink);background:var(--paper)}
+.ticket .lab{font-family:var(--f-mono);font-size:12px;font-weight:700;color:var(--accent);display:block;margin-bottom:2px}
+.ticket p{font-size:18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:grid;gap:12px}
+.card.ex{border-style:dashed}
+.tag{display:inline-block;font-family:var(--f-mono);font-size:12px;padding:2px 8px;border-radius:6px;background:var(--info-soft);color:var(--info)}
+.hint{font-size:14px;color:var(--muted)}
+label.f{display:grid;gap:6px;font-weight:700}
+label.f span.h{font-weight:400;font-size:14px;color:var(--muted)}
+input[type=text],input[type=email],select,textarea{width:100%;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:17px}
+textarea{min-height:84px;resize:vertical}
+.count{font-family:var(--f-mono);font-size:12px;color:var(--muted);text-align:right}
+.count.ok{color:var(--ok)}
+.row2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.row2>*{min-width:0}
+
+/* puces */
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:7px 14px;cursor:pointer;font-size:15px;text-align:left}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.chip.sugg{box-shadow:inset 0 0 0 2px var(--accent)}
+
+/* quiz */
+.q{border-top:1px solid var(--line);padding-top:14px;display:grid;gap:10px}
+.q:first-child{border-top:0;padding-top:0}
+.q-text{font-size:17px}
+.q-text .n{font-family:var(--f-mono);font-weight:700;color:var(--accent);margin-right:6px}
+.quote{font-style:italic}
+.who-q{font-family:var(--f-mono);font-size:13px;color:var(--muted);font-style:normal}
+.opts{display:flex;flex-wrap:wrap;gap:8px}
+.opt{border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:8px 12px;cursor:pointer;font-size:15px;text-align:left}
+.opt[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.opt.right{outline:3px solid var(--ok);outline-offset:1px}
+.opt.wrong{background:var(--ko);border-color:var(--ko);color:var(--card)}
+.locked .opt{cursor:default}
+.expl{font-size:15px;padding:10px 12px;border-radius:8px;background:var(--ok-soft)}
+.expl.bad{background:var(--ko-soft)}
+.legend{display:grid;gap:6px;font-size:15px}
+.legend div{display:grid;grid-template-columns:28px 1fr;gap:8px}
+.legend b{font-family:var(--f-mono);color:var(--accent)}
+
+/* boutons */
+.btns{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.btn{border:0;border-radius:8px;padding:12px 18px;font-weight:700;cursor:pointer;font-size:16px;background:var(--ink);color:var(--paper);text-decoration:none;display:inline-block}
+.btn.acc{background:var(--accent);color:var(--accent-ink)}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--ink)}
+.btn.small{padding:8px 12px;font-size:14px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.msg{font-size:15px;padding:10px 12px;border-radius:8px}
+.msg.err{background:var(--ko-soft);color:var(--ink);border-left:4px solid var(--ko)}
+.msg.good{background:var(--ok-soft);border-left:4px solid var(--ok)}
+.msg.warn{background:var(--accent-soft);border-left:4px solid var(--accent)}
+.score{font-family:var(--f-mono);font-weight:700}
+
+/* défi */
+details.defi{border:2px solid var(--accent);border-radius:var(--r);background:var(--card)}
+details.defi summary{cursor:pointer;padding:12px 16px;font-weight:700;list-style:none;display:flex;gap:10px;align-items:center}
+details.defi summary::-webkit-details-marker{display:none}
+details.defi summary .plus{font-family:var(--f-mono);background:var(--accent);color:var(--accent-ink);border-radius:6px;padding:2px 8px;font-size:13px}
+details.defi .in{padding:0 16px 16px;display:grid;gap:10px}
+details.defi.won summary .plus{background:var(--ok);color:var(--card)}
+
+/* pause */
+.pausebox{text-align:center;padding:40px 16px;display:grid;gap:14px;justify-items:center}
+.pausebox .big{font-family:var(--f-display);font-size:clamp(48px,12vw,96px);font-weight:800;color:var(--accent);line-height:1}
+
+/* bilan métiers */
+.bars{display:grid;gap:8px}
+.barrow{display:grid;grid-template-columns:minmax(0,1fr) 120px 44px;gap:10px;align-items:center;font-size:15px}
+.barrow .track{height:12px;background:var(--line);border-radius:6px;overflow:hidden}
+.barrow .track i{display:block;height:100%;background:var(--accent)}
+.barrow .v{font-family:var(--f-mono);font-size:13px;text-align:right;font-variant-numeric:tabular-nums}
+.barrow small{color:var(--muted)}
+
+/* réseau */
+.net-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;padding:10px;border:1px solid var(--line);border-radius:8px}
+.net-row>*{min-width:0}
+.netsvg{width:100%;max-width:560px;height:auto;display:block;margin:0 auto}
+.netleg{display:flex;flex-wrap:wrap;gap:12px;font-size:13px;justify-content:center}
+.netleg i{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:4px;vertical-align:-1px}
+
+/* aperçu présentation */
+.preview{background:var(--paper);border-left:4px solid var(--accent);padding:14px 16px;border-radius:0 8px 8px 0;font-size:17px}
+.preview .blank{background:var(--hl);color:var(--hl-ink);padding:0 4px;border-radius:3px}
+pre.recap{white-space:pre-wrap;word-break:break-word;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:12px;font-family:var(--f-mono);font-size:13px;max-height:360px;overflow:auto}
+.timer{font-family:var(--f-mono)}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+@media (max-width:480px){ body{font-size:16px} .ticket{padding-left:40px} .ticket::before{left:12px} .barrow{grid-template-columns:minmax(0,1fr) 70px 40px} }
+</style>
+
+<div class="bar"><div class="bar-in">
+  <div class="brand">compétences <span>cachées</span></div>
+  <div class="who" id="who">3e prépa métiers</div>
+  <button type="button" class="resetbtn" id="resetBtn">nouvel élève</button>
+  <div class="pts" id="pts">0 pts</div>
+  <div class="prog"><i id="progbar"></i></div>
+</div>
+<div class="resetbox" id="resetBox" hidden></div></div>
+
+<div class="wrap">
+  <nav class="nav" id="nav" aria-label="étapes"></nav>
+  <div class="msg warn" id="otherBanner" style="margin-top:12px" hidden></div>
+  <p class="rule"><b>La règle du jour :</b> les points se gagnent avec des réponses complètes, pas avec la vitesse. Tu as fini avant les autres ? Les <b>défis bonus</b> (cadre orange) rapportent le plus de points.</p>
+
+  <!-- ÉTAPE 0 -->
+  <section class="step" data-id="s0" hidden>
+    <div class="step-head"><div class="meta"></div><h2>Avant de commencer</h2></div>
+    <div class="ticket"><span class="lab">consigne</span><p>Écris ton prénom, choisis ton humeur, puis réponds à la question <mark>avec tes mots</mark>. Il n'y a pas de mauvaise réponse.</p></div>
+    <div class="card">
+      <label class="f">Ton prénom<input type="text" id="prenom" data-k="prenom" autocomplete="given-name"></label>
+      <div class="f"><b>Ton humeur maintenant</b><div class="chips" id="humeur"></div></div>
+      <label class="f">Pour toi, c'est quoi une « compétence » ?<span class="h">Une phrase, même si tu n'es pas sûr·e.</span><textarea id="s0_def" data-k="s0_def" data-min="15"></textarea><div class="count" data-for="s0_def"></div></label>
+    </div>
+  </section>
+
+  <!-- ÉTAPE 1 -->
+  <section class="step" data-id="s1" hidden>
+    <div class="step-head"><div class="meta"></div><h2>Ce que tu fais quand tu n'es pas au collège</h2></div>
+    <div class="ticket"><span class="lab">consigne</span><p>Clique sur <mark>au moins 5 activités</mark> que tu fais vraiment (même un peu, même rarement). Ces choix serviront dans toute la séance.</p></div>
+    <div class="card">
+      <div class="chips" id="acts"></div>
+      <label class="f">Une autre activité qui n'est pas dans la liste ?<span class="h">Facultatif</span><input type="text" id="act_autre" data-k="act_autre"></label>
+      <label class="f">Combien d'heures par semaine pour ton activité préférée ?
+        <select id="heures" data-k="heures"><option value="">choisis</option><option>moins d'1 heure</option><option>1 à 3 heures</option><option>3 à 6 heures</option><option>6 à 10 heures</option><option>plus de 10 heures</option></select></label>
+    </div>
+  </section>
+
+  <!-- ÉTAPE 2 -->
+  <section class="step" data-id="s2" hidden>
+    <div class="step-head"><div class="meta"></div><h2>Une compétence, c'est quoi exactement ?</h2></div>
+    <div class="card">
+      <p><b>Une compétence</b>, c'est être capable de faire quelque chose dans une vraie situation, et pouvoir le montrer. On en apprend au collège, mais aussi au sport, à la maison, avec les potes.</p>
+      <div class="legend">
+        <div><b>S</b><span><b>savoir</b> : ce que tu connais (des règles, des infos).</span></div>
+        <div><b>SF</b><span><b>savoir-faire</b> : ce que tu sais faire avec tes mains ou ta tête.</span></div>
+        <div><b>SE</b><span><b>savoir-être</b> : ta façon de te comporter avec les autres et au travail.</span></div>
+      </div>
+    </div>
+    <div class="ticket"><span class="lab">consigne 1</span><p>Range chaque exemple dans la <mark>bonne famille</mark>, puis clique sur « vérifier ». Attention : tu ne peux vérifier qu'une fois.</p></div>
+    <div class="card" id="q_sort"></div>
+    <div class="ticket"><span class="lab">consigne 2</span><p>Vrai ou faux ? <mark>Lis chaque phrase jusqu'au bout</mark> avant de répondre.</p></div>
+    <div class="card" id="q_vf2"></div>
+  </section>
+
+  <!-- ÉTAPE 3 -->
+  <section class="step" data-id="s3" hidden>
+    <div class="step-head"><div class="meta"></div><h2>8 jeunes, 8 témoignages</h2></div>
+    <div class="ticket"><span class="lab">consigne</span><p>Ces lycéens parlent de leur vie. Sans le savoir, ils utilisent une compétence. Pour chaque témoignage, choisis la <mark>lettre de la compétence (A à E)</mark>. Une même lettre peut servir plusieurs fois.</p></div>
+    <div class="card">
+      <h3>Les 5 compétences</h3>
+      <div class="legend" id="legendAE"></div>
+    </div>
+    <div class="card" id="q_temo"></div>
+    <div class="card">
+      <label class="f">Lequel de ces 8 jeunes te ressemble le plus ? Pourquoi ?<span class="h">Donne son prénom et une raison.</span><textarea id="s3_proche" data-k="s3_proche" data-min="25"></textarea><div class="count" data-for="s3_proche"></div></label>
+    </div>
+  </section>
+
+  <!-- ÉTAPE 4 -->
+  <section class="step" data-id="s4" hidden>
+    <div class="step-head"><div class="meta"></div><h2>Le traducteur : de ta vie au CV</h2></div>
+    <div class="ticket"><span class="lab">consigne</span><p>Chaque phrase cache des compétences. Pour chaque phrase, choisis <mark>exactement 2 compétences</mark> sur les 4 proposées.</p></div>
+    <div class="card" id="q_trad"></div>
+    <div class="card">
+      <label class="f">À toi : écris une phrase sur quelque chose que tu fais, puis la compétence cachée.<span class="h">Exemple : « Je fais les courses pour ma grand-mère chaque samedi » → être fiable, gérer de l'argent.</span><textarea id="s4_moi" data-k="s4_moi" data-min="30"></textarea><div class="count" data-for="s4_moi"></div></label>
+    </div>
+  </section>
+
+  <!-- PAUSE 1 -->
+  <section class="step" data-id="p1" hidden>
+    <div class="card pausebox">
+      <div class="big">pause</div>
+      <h2>10 minutes loin de l'écran</h2>
+      <p>Lève-toi, bouge, bois de l'eau. Ton travail est gardé sur cet ordinateur.</p>
+    </div>
+  </section>
+
+  <!-- ÉTAPE 5 -->
+  <section class="step" data-id="s5" hidden>
+    <div class="step-head"><div class="meta"></div><h2>Ton inventaire de compétences</h2></div>
+    <div class="ticket"><span class="lab">consigne</span><p>Choisis <mark>3 activités</mark> que tu fais. Pour chacune : raconte ce que tu fais concrètement, choisis au moins 2 compétences, puis donne <mark>une preuve</mark> (une fois précise où tu l'as fait).</p></div>
+    <div class="card ex">
+      <span class="tag">exemple, à ne pas recopier</span>
+      <p><b>Activité :</b> réparer un vélo, un scooter, une trottinette</p>
+      <p><b>Concrètement :</b> <i>« Le week-end, je répare les vélos de mes cousins dans le garage. Je regarde des tutos et j'utilise les outils de mon oncle. »</i></p>
+      <p><b>Compétences :</b> utiliser des outils · apprendre seul, se débrouiller · observer, repérer un problème</p>
+      <p><b>Preuve :</b> <i>« Le mois dernier, le dérailleur de mon cousin ne marchait plus. J'ai trouvé que le câble était détendu et je l'ai réglé. »</i></p>
+    </div>
+    <p class="hint">Les compétences entourées en orange sont des suggestions liées à l'activité. Tu peux en choisir d'autres.</p>
+    <div id="inv"></div>
+  </section>
+
+  <!-- ÉTAPE 6 -->
+  <section class="step" data-id="s6" hidden>
+    <div class="step-head"><div class="meta"></div><h2>Ce que cherchent les patrons</h2></div>
+    <div class="ticket"><span class="lab">consigne</span><p>Pour chaque métier, choisis les <mark>3 compétences les plus importantes</mark>. Réfléchis à une journée de travail dans ce métier avant de cliquer.</p></div>
+    <div class="card" id="q_met"></div>
+  </section>
+
+  <!-- ÉTAPE 7 -->
+  <section class="step" data-id="s7" hidden>
+    <div class="step-head"><div class="meta"></div><h2>Tes compétences, quels métiers ?</h2></div>
+    <div class="ticket"><span class="lab">consigne</span><p>Le classement ci-dessous est calculé avec <mark>les compétences de ton inventaire</mark>. Regarde-le, puis réponds aux questions.</p></div>
+    <div class="card"><h3>Les métiers qui demandent tes compétences</h3><div class="bars" id="bars"></div><p class="hint">Ce n'est pas une prédiction. C'est un point de départ pour chercher un stage.</p></div>
+    <div class="card">
+      <label class="f">Ce résultat te surprend ? Qu'est-ce qui te plaît ou ne te plaît pas dans le premier métier ?<textarea id="s7_why" data-k="s7_why" data-min="30"></textarea><div class="count" data-for="s7_why"></div></label>
+      <label class="f">Dans quel secteur aimerais-tu chercher un stage ?<select id="s7_sect" data-k="s7_sect"></select></label>
+    </div>
+  </section>
+
+  <!-- ÉTAPE 8 -->
+  <section class="step" data-id="s8" hidden>
+    <div class="step-head"><div class="meta"></div><h2>Les clichés sur les métiers</h2></div>
+    <div class="ticket"><span class="lab">consigne</span><p>Vrai ou faux ? Puis lis <mark>l'explication</mark> qui s'affiche après la vérification.</p></div>
+    <div class="card" id="q_cli"></div>
+    <div class="card">
+      <label class="f">Un cliché que tu as déjà entendu (sur toi, sur ton collège, sur un métier) : qu'en penses-tu ?<textarea id="s8_cliche" data-k="s8_cliche" data-min="25"></textarea><div class="count" data-for="s8_cliche"></div></label>
+    </div>
+  </section>
+
+  <!-- PAUSE 2 -->
+  <section class="step" data-id="p2" hidden>
+    <div class="card pausebox">
+      <div class="big">pause</div>
+      <h2>10 minutes, encore 3 étapes après</h2>
+      <p>Tu as déjà fait plus de la moitié. Ton travail est gardé.</p>
+    </div>
+  </section>
+
+  <!-- ÉTAPE 9 -->
+  <section class="step" data-id="s9" hidden>
+    <div class="step-head"><div class="meta"></div><h2>Quand ça ne marche pas : le plan B</h2></div>
+    <div class="ticket"><span class="lab">consigne</span><p>Pour chaque situation, choisis <mark>toutes les réactions qui aident</mark> (il y en a plusieurs).</p></div>
+    <div class="card" id="q_planb"></div>
+    <div class="card">
+      <label class="f">Ton plan B : si tu n'as pas de stage dans le métier que tu veux, vers quoi d'autre peux-tu aller ? Pourquoi ?<textarea id="s9_planb" data-k="s9_planb" data-min="30"></textarea><div class="count" data-for="s9_planb"></div></label>
+    </div>
+  </section>
+
+  <!-- ÉTAPE 10 -->
+  <section class="step" data-id="s10" hidden>
+    <div class="step-head"><div class="meta"></div><h2>Ton réseau pour trouver un stage</h2></div>
+    <div class="ticket"><span class="lab">consigne</span><p>Note <mark>au moins 3 personnes</mark> que tu connais et qui pourraient t'aider (famille, voisins, coach, parents de potes, commerçants...). Ta carte se dessine en dessous.</p></div>
+    <div class="card"><div id="netrows" style="display:grid;gap:10px"></div><div class="btns"><button class="btn ghost small" type="button" id="addnet">+ ajouter une personne</button></div></div>
+    <div class="card"><h3>Ta carte réseau</h3><div id="netmap"></div></div>
+    <div class="card">
+      <label class="f">Qui vas-tu contacter en premier, quand et comment (message, appel, en vrai) ?<textarea id="s10_first" data-k="s10_first" data-min="25"></textarea><div class="count" data-for="s10_first"></div></label>
+    </div>
+  </section>
+
+  <!-- ÉTAPE 11 -->
+  <section class="step" data-id="s11" hidden>
+    <div class="step-head"><div class="meta"></div><h2>Ta présentation pour un patron</h2></div>
+    <div class="ticket"><span class="lab">consigne</span><p>Remplis <mark>tous les champs</mark>. Le texte se construit tout seul en bas. Relis-le : c'est ce que tu pourras écrire dans un mail ou dire au téléphone.</p></div>
+    <div class="card">
+      <div class="row2">
+        <label class="f">Nom du collège<input type="text" id="pr_college" data-k="pr_college"></label>
+        <label class="f">Secteur du stage<select id="pr_secteur" data-k="pr_secteur"></select></label>
+      </div>
+      <label class="f">Pourquoi ce secteur ?<span class="h">Commence par un verbe ou « j'aime », « je veux »...</span><input type="text" id="pr_pourquoi" data-k="pr_pourquoi"></label>
+      <div class="row2">
+        <label class="f">Une activité que tu fais<select id="pr_act" data-k="pr_act"></select></label>
+        <label class="f">Ce qu'elle t'a appris<select id="pr_comp" data-k="pr_comp"></select></label>
+      </div>
+      <div class="row2">
+        <label class="f">Une qualité<select id="pr_q1" data-k="pr_q1"></select></label>
+        <label class="f">Une autre qualité<select id="pr_q2" data-k="pr_q2"></select></label>
+      </div>
+      <label class="f">Dates de stage<span class="h">Demande à ta prof si tu ne sais pas. Exemple : du 8 au 12 décembre</span><input type="text" id="pr_dates" data-k="pr_dates"></label>
+    </div>
+    <div class="card"><h3>Ta présentation</h3><div class="preview" id="preview"></div></div>
+  </section>
+
+  <!-- ÉTAPE 12 -->
+  <section class="step" data-id="s12" hidden>
+    <div class="step-head"><div class="meta"></div><h2>Bilan</h2></div>
+    <div class="ticket"><span class="lab">consigne</span><p>Réponds à nouveau à la question du début, <mark>sans regarder ta première réponse</mark>. Puis complète le reste.</p></div>
+    <div class="card">
+      <label class="f">Maintenant, pour toi, c'est quoi une compétence ?<textarea id="s12_def" data-k="s12_def" data-min="25"></textarea><div class="count" data-for="s12_def"></div></label>
+      <div class="f"><b>Les 3 compétences dont tu es le plus sûr·e</b><span class="hint">Choisis-en exactement 3.</span><div class="chips" id="sure"></div></div>
+      <label class="f">Une chose que tu as apprise sur toi aujourd'hui<textarea id="s12_appris" data-k="s12_appris" data-min="20"></textarea><div class="count" data-for="s12_appris"></div></label>
+      <div class="f"><b>Cette séance t'a servi ?</b><div class="chips" id="note"></div></div>
+      <label class="f">Une question pour ta prof ?<span class="h">Facultatif</span><input type="text" id="s12_q" data-k="s12_q"></label>
+    </div>
+  </section>
+
+  <!-- ÉTAPE 13 -->
+  <section class="step" data-id="s13" hidden>
+    <div class="step-head"><div class="meta"></div><h2>Envoyer ton travail à ta prof</h2></div>
+    <div class="ticket"><span class="lab">consigne</span><p>Tout ton travail est rassemblé ci-dessous. <mark>Envoie-le</mark> à ta prof avec une des 3 méthodes, puis coche la case en bas.</p></div>
+    <div class="card" id="defisleft"></div>
+    <div class="card">
+      <label class="f">Adresse mail de ta prof<span class="h">Ta prof te la donne.</span><input type="email" id="profmail" data-k="profmail" autocomplete="off"></label>
+      <div class="btns">
+        <button class="btn acc" type="button" id="copyBtn">1. copier mon travail</button>
+        <a class="btn" id="mailBtn" href="#" target="_blank" rel="noopener">2. ouvrir ma messagerie</a>
+        <button class="btn ghost" type="button" id="dlBtn" hidden>3. télécharger le fichier</button>
+      </div>
+      <div id="sendmsg"></div>
+      <p class="hint">Méthode conseillée : « copier mon travail », puis colle-le (Ctrl + V) dans un mail ou un message de l'ENT pour ta prof. Le bouton « ouvrir ma messagerie » ne marche pas sur tous les ordinateurs.</p>
+      <pre class="recap" id="recap"></pre>
+      <label class="chip" style="display:flex;gap:10px;align-items:center;border-radius:8px"><input type="checkbox" id="sent" data-k="sent"> J'ai envoyé mon travail à ma prof.</label>
+    </div>
+  </section>
+
+  <div id="foot" class="step" style="margin-top:18px"></div>
+</div>
+
+<script>
+/* ---------- données ---------- */
+const NB = " ";
+const COMP = {
+  equipe:"Travailler en équipe", communiquer:"Communiquer, expliquer", responsable:"Être responsable, fiable",
+  patience:"Être patient", ponctuel:"Être ponctuel, régulier", perseverer:"Persévérer, ne pas lâcher",
+  calme:"Garder son calme", organiser:"S'organiser, gérer son temps", manuel:"Être habile de ses mains",
+  outils:"Utiliser des outils", precision:"Être minutieux, précis", apprendre:"Apprendre seul, se débrouiller",
+  creatif:"Être créatif", numerique:"Maîtriser le numérique (vidéo, réseaux)", negocier:"Négocier, vendre",
+  accueillir:"Accueillir, rendre service", soin:"Prendre soin des autres", langues:"Parler plusieurs langues",
+  physique:"Avoir de l'endurance physique", securite:"Respecter des règles de sécurité",
+  calcul:"Compter, gérer de l'argent", observer:"Observer, repérer un problème"
+};
+const ACTS = [
+  ["jeux","Jouer en ligne en équipe",["equipe","communiquer","calme"]],
+  ["sportclub","Faire du sport en club",["ponctuel","perseverer","equipe","physique"]],
+  ["foot","Jouer au foot ou au basket avec les potes",["equipe","physique"]],
+  ["muscu","Faire de la muscu",["perseverer","ponctuel","physique"]],
+  ["garder","Garder des petits frères, sœurs ou cousins",["responsable","patience","soin"]],
+  ["cuisine","Cuisiner",["organiser","precision","creatif"]],
+  ["maison","Faire des courses ou des tâches à la maison",["responsable","organiser","calcul"]],
+  ["reparer","Réparer un vélo, un scooter, une trottinette",["manuel","outils","observer","apprendre"]],
+  ["bricoler","Bricoler, monter des meubles",["manuel","outils","precision"]],
+  ["aiderproche","Aider un proche dans son travail (chantier, magasin, jardin)",["manuel","physique","accueillir","responsable"]],
+  ["boulot","Faire des petits boulots (tonte, lavage auto, baby-sitting)",["responsable","ponctuel","calcul"]],
+  ["video","Faire des vidéos, des montages",["numerique","creatif","apprendre"]],
+  ["dessin","Dessiner, graffer, faire du design",["creatif","precision"]],
+  ["musique","Faire de la musique, du rap",["creatif","perseverer"]],
+  ["animal","S'occuper d'un animal",["responsable","soin","ponctuel"]],
+  ["coiffure","Coiffer, maquiller, faire les ongles",["creatif","manuel","precision","accueillir"]],
+  ["revente","Acheter et revendre (Vinted, Leboncoin)",["negocier","calcul","numerique"]],
+  ["traduire","Traduire pour ma famille (papiers, rendez-vous)",["langues","responsable","communiquer"]],
+  ["orga","Organiser des sorties ou des événements",["organiser","communiquer"]],
+  ["ecouter","Écouter et aider un ami qui va mal",["soin","patience","calme"]],
+  ["grandparent","Aider un grand-parent",["soin","patience","responsable"]],
+  ["custom","Customiser des vêtements ou des sneakers",["creatif","manuel","precision"]],
+  ["nature","Aller à la pêche, jardiner, me balader dans la nature",["patience","observer","physique"]],
+  ["info","Bidouiller un ordi, une console, un téléphone",["numerique","observer","apprendre"]]
+];
+const ACT = Object.fromEntries(ACTS.map(a=>[a[0],{label:a[1],c:a[2]}]));
+const METIERS = [
+  ["Mécanicien·ne auto","Automobile",["manuel","outils","observer","precision","securite","apprendre"]],
+  ["Cuisinier·ère","Hôtellerie-restauration",["organiser","equipe","calme","physique","precision","creatif"]],
+  ["Vendeur·euse en magasin","Commerce",["accueillir","communiquer","negocier","calcul","ponctuel"]],
+  ["Aide-soignant·e","Santé, social",["soin","patience","calme","equipe","responsable"]],
+  ["Électricien·ne","Bâtiment",["securite","precision","outils","observer","manuel","calcul"]],
+  ["Coiffeur·euse","Coiffure, esthétique",["creatif","accueillir","communiquer","manuel","precision"]],
+  ["Maçon·ne","Bâtiment",["physique","manuel","equipe","outils","securite","perseverer"]],
+  ["Jardinier·ère paysagiste","Agriculture, environnement",["physique","manuel","creatif","outils","perseverer","observer"]],
+  ["Animateur·rice périscolaire","Animation, sport",["patience","communiquer","creatif","responsable","equipe"]],
+  ["Préparateur·rice de commandes","Logistique",["organiser","physique","ponctuel","securite","precision"]],
+  ["Agent·e d'accueil en hôtel","Hôtellerie-restauration",["accueillir","langues","communiquer","calme","organiser"]],
+  ["Boulanger·ère","Alimentation",["organiser","ponctuel","manuel","physique","precision"]],
+  ["Technicien·ne informatique","Numérique",["numerique","apprendre","observer","precision","creatif"]],
+  ["Agent·e de sécurité","Sécurité",["calme","observer","responsable","ponctuel","communiquer"]],
+  ["Auxiliaire petite enfance","Petite enfance",["patience","soin","responsable","creatif","calme"]]
+];
+const SECTEURS = ["Automobile","Bâtiment","Commerce","Hôtellerie-restauration","Alimentation (boulangerie, boucherie)","Santé, social","Petite enfance","Coiffure, esthétique","Agriculture, environnement","Animation, sport","Logistique","Transport","Industrie","Numérique","Sécurité","Je ne sais pas encore"];
+const QUALS = ["ponctuel·le","sérieux·se","patient·e","calme","motivé·e","poli·e","curieux·se","travailleur·se","souriant·e","débrouillard·e","organisé·e","courageux·se"];
+
+/* ---------- quiz ---------- */
+const Q = {
+  sort:{ items:[
+    ["Connaître les règles du foot",0],["Changer une chambre à air",1],["Être ponctuel",2],
+    ["Connaître le code de la route",0],["Monter un meuble avec la notice",1],["Rester calme quand on perd",2],
+    ["Connaître le prix des choses au supermarché",0],["Faire un montage vidéo",1],["Être patient avec un enfant",2],
+    ["Connaître les ingrédients d'une recette",0],["Cuisiner un plat",1],["Dire bonjour et être poli avec un client",2]
+  ].map(([q,a])=>({q,o:["savoir","savoir-faire","savoir-être"],a})), pts:1 },
+  vf2:{ items:[
+    {q:"On apprend des compétences seulement à l'école.",o:["vrai","faux"],a:1,e:"Faux. Le sport, la famille, les jeux, les petits boulots apprennent aussi beaucoup de choses."},
+    {q:"On peut avoir une compétence sans le savoir.",o:["vrai","faux"],a:0,e:"Vrai. C'est le thème de la séance : tu fais des choses tous les jours sans te dire que ce sont des compétences."},
+    {q:"Pour un stage, un patron regarde seulement les notes.",o:["vrai","faux"],a:1,e:"Faux. Il regarde surtout la motivation, la politesse, la ponctualité, l'envie d'apprendre."},
+    {q:"Être poli et à l'heure, c'est une compétence.",o:["vrai","faux"],a:0,e:"Vrai. C'est du savoir-être, et c'est souvent la première chose qu'un patron remarque."}
+  ], pts:1 },
+  temo:{ items:[
+    ["Thibaut, 16 ans","Certains pensent que les femmes ne peuvent pas travailler dans le bâtiment. Bien sûr, elles peuvent ! Si un jour je suis chef d'entreprise dans le bâtiment, si une femme me demande à travailler chez moi et qu'elle en a les compétences, je lui dirais oui, comme je le dirais à un homme.",1,"Thibaut refuse l'idée que le bâtiment serait réservé aux hommes : il démonte un cliché."],
+    ["Emma, 17 ans","Moi, je suis sûre de ce que je veux faire. Je suis allée parler à ma professeure principale et à la psychologue de l'orientation et je me suis renseignée sur les sites officiels.",0,"Emma sait vers qui aller (prof principale, psychologue) et où chercher (sites officiels)."],
+    ["Anaëlle, 16 ans","Je serais super déçue de moi. Mais je trouverais des alternatives pour faire ce que je voulais, par exemple, revoir un autre cursus d'études.",3,"Anaëlle serait déçue, mais elle chercherait une autre route : elle rebondit."],
+    ["Tidiane, 17 ans","Il y a les heures dédiées pour l'orientation, sinon je vais voir ma prof principale. Et pour le lieu, j'irai au CDI.",0,"Tidiane connaît les personnes et les lieux qui aident à s'orienter."],
+    ["Anaëlle, 16 ans","Dans le médical, ce sont souvent les femmes qui sont infirmières ou aides-soignantes, alors que les hommes sont souvent des médecins. Mon père est aide-soignant et sur une photo, il est avec des collègues femmes qui sont infirmières. La première réaction des gens est de penser que mon père est médecin.",1,"Les gens pensent que l'homme est forcément médecin : Anaëlle repère ce cliché."],
+    ["Tidiane, 17 ans","Je pratique la musculation et j'apprends à mon sujet que j'ai un bon mental, que si je suis motivé, je peux faire ce que je veux. J'ai un job de serveur en restaurant et j'ai remarqué que je suis extraverti, que j'apprends vite.",2,"La muscu et son job de serveur lui apprennent qui il est : il se connaît grâce à ses activités hors école."],
+    ["Sofia, 17 ans","D'abord, je réfléchis pour voir si j'ai les compétences nécessaires pour le stage. Après, je vais chercher à rencontrer des personnes pouvant me renseigner sur des entreprises ou des connaissances à eux qui pourraient me prendre en stage.",4,"Sofia passe par les gens qu'elle connaît pour trouver un stage : c'est son réseau."],
+    ["Clément, 17 ans","Si je ratais mon concours, je pense que je me dirais juste que ce n'est pas grave. Et je réessaierais une prochaine fois. Au pire, je trouverais quelque chose s'apparentant à ce métier, dans la même branche.",3,"Clément accepte l'échec, réessaie ou choisit un métier proche : il rebondit."]
+  ].map(([w,t,a,e])=>({q:`<span class="quote">« ${t} »</span><br><span class="who-q">${w}</span>`,o:["A","B","C","D","E"],a,e})), pts:2 },
+  trad:{ multi:true, max:2, items:[
+    {q:"« Je joue en ligne en équipe tous les soirs, c'est moi qui donne la stratégie. »",o:["Travailler en équipe","Ranger un atelier","Donner des consignes claires","Accueillir des clients"],a:[0,2]},
+    {q:"« Je garde mes deux petits frères le mercredi après-midi. »",o:["Souder du métal","Être responsable","Faire la comptabilité","Être patient"],a:[1,3]},
+    {q:"« J'ai réparé la chaîne de mon vélo avec un tuto YouTube. »",o:["Apprendre seul","Parler une langue étrangère","Utiliser des outils","Diriger une équipe"],a:[0,2]},
+    {q:"« Je revends mes fringues sur Vinted. »",o:["Négocier un prix","Conduire un engin","Bien présenter un produit","Faire un pansement"],a:[0,2]},
+    {q:"« Je traduis les papiers et les rendez-vous pour mes parents. »",o:["Peindre un mur","Parler deux langues","Courir vite","Être fiable et discret"],a:[1,3]},
+    {q:"« Je vais à la boxe 3 fois par semaine, même quand il pleut. »",o:["Être régulier","Se battre au travail","Persévérer","Cuisiner"],a:[0,2]},
+    {q:"« Le dimanche, je fais à manger pour toute la famille. »",o:["Réparer un moteur","Suivre des étapes dans l'ordre","Vendre au téléphone","Gérer son temps"],a:[1,3]},
+    {q:"« J'ai monté l'armoire de ma chambre tout seul avec la notice. »",o:["Lire un plan","Animer un groupe","Être minutieux","Faire un massage"],a:[0,2]}
+  ], pts:2 },
+  met:{ multi:true, max:3, partial:true, items:[
+    {q:"<b>Mécanicien·ne auto</b> : répare et entretient les voitures.",o:["Observer, repérer un problème","Parler plusieurs langues","Utiliser des outils","Prendre soin des autres","Respecter des règles de sécurité","Négocier, vendre"],a:[0,2,4]},
+    {q:"<b>Aide-soignant·e</b> : aide les patients à l'hôpital ou en maison de retraite.",o:["Utiliser des outils","Prendre soin des autres","Être créatif","Être patient","Négocier, vendre","Garder son calme"],a:[1,3,5]},
+    {q:"<b>Vendeur·euse</b> : conseille et vend en magasin.",o:["Accueillir, rendre service","Être habile de ses mains","Communiquer, expliquer","Utiliser des outils","Compter, gérer de l'argent","Prendre soin des autres"],a:[0,2,4]},
+    {q:"<b>Cuisinier·ère</b> : prépare les plats dans un restaurant.",o:["Parler plusieurs langues","S'organiser, gérer son temps","Négocier, vendre","Travailler en équipe","Maîtriser le numérique","Garder son calme"],a:[1,3,5]},
+    {q:"<b>Électricien·ne</b> : installe les câbles, prises, tableaux électriques.",o:["Respecter des règles de sécurité","Accueillir, rendre service","Être minutieux, précis","Négocier, vendre","Utiliser des outils","Prendre soin des autres"],a:[0,2,4]},
+    {q:"<b>Animateur·rice</b> : s'occupe des enfants au centre de loisirs ou à la cantine.",o:["Utiliser des outils","Être patient","Compter, gérer de l'argent","Communiquer, expliquer","Avoir de l'endurance physique","Être responsable, fiable"],a:[1,3,5]}
+  ], pts:1 },
+  cli:{ items:[
+    {q:"Une fille ne peut pas devenir électricienne.",o:["vrai","faux"],a:1,e:"Faux. Aucun métier n'est interdit aux filles. Ce qui compte, ce sont les compétences et la formation."},
+    {q:"Un garçon peut travailler dans la petite enfance (crèche, école maternelle).",o:["vrai","faux"],a:0,e:"Vrai. Les crèches et les écoles recrutent aussi des hommes."},
+    {q:"Dans le bâtiment, il faut être très costaud pour tous les métiers.",o:["vrai","faux"],a:1,e:"Faux. Il existe des machines, et beaucoup de métiers demandent surtout de la précision (électricité, peinture, plomberie)."},
+    {q:"Si tu as de mauvaises notes, tu ne peux rien apprendre.",o:["vrai","faux"],a:1,e:"Faux. Beaucoup de gens apprennent mieux en pratiquant : en CAP et en apprentissage, on apprend surtout en atelier et en entreprise."},
+    {q:"Une femme peut diriger une entreprise de maçonnerie.",o:["vrai","faux"],a:0,e:"Vrai. Des femmes dirigent des entreprises du bâtiment."},
+    {q:"Coiffeur, c'est un métier de fille.",o:["vrai","faux"],a:1,e:"Faux. Beaucoup d'hommes sont coiffeurs ou barbiers."}
+  ], pts:1 },
+  planb:{ multi:true, items:[
+    {q:"<b>Situation 1.</b> Tu as appelé 5 entreprises pour ton stage. Les 5 ont dit non.",o:["Abandonner, ça ne sert à rien","Demander à des proches s'ils connaissent quelqu'un","Aller sur place, poli, avec une présentation écrite","Appeler d'autres entreprises dans un secteur proche","Répondre mal au patron"],a:[1,2,3]},
+    {q:"<b>Situation 2.</b> La formation que tu voulais après la 3e n'a plus de place.",o:["Demander à ta prof principale ou à la psychologue de l'orientation","Chercher la même formation en apprentissage","Choisir n'importe quoi au hasard","Chercher une formation proche dans le même secteur","Ne rien dire à personne"],a:[0,1,3]},
+    {q:"<b>Situation 3.</b> Premier jour de stage : on te demande une tâche que tu ne sais pas faire.",o:["Demander qu'on te montre","Faire semblant de savoir","Observer comment fait un collègue","Partir","Noter les étapes pour la prochaine fois"],a:[0,2,4]}
+  ], pts:2 }
+};
+const AE = [
+  ["A","Savoir à qui demander de l'aide et où chercher pour s'orienter (personnes, lieux, sites)."],
+  ["B","Repérer et refuser les clichés (exemple : « ce métier, c'est pour les garçons »)."],
+  ["C","Apprendre à se connaître grâce à ce qu'on fait en dehors de l'école."],
+  ["D","Rebondir quand ça ne se passe pas comme prévu."],
+  ["E","Se faire un réseau : utiliser les personnes qu'on connaît."]
+];
+
+/* ---------- défis ---------- */
+const DEFIS = {
+  s0:"Écris 3 choses que tu sais faire et que tes profs ne savent pas que tu sais faire.",
+  s1:"Dans l'activité où tu passes le plus de temps, qu'est-ce que tu fais mieux que les autres ? Donne un exemple.",
+  s2:"Trouve 2 savoir-être qu'un patron veut voir dès le premier jour de stage. Explique pourquoi pour chacun.",
+  s3:"Choisis une compétence (A à E) et donne un exemple tiré de ta vie à toi.",
+  s4:"Traduis 2 autres phrases de ta vie en compétences, comme dans l'exercice.",
+  s5:"Ajoute une 4e activité à ton inventaire : l'activité, une compétence, une preuve.",
+  s6:"Choisis un métier qui n'est pas dans la liste. Quelles sont ses 3 compétences les plus importantes ? Pourquoi ?",
+  s7:"Va sur onisep.fr et cherche le premier métier de ton classement. Note : le diplôme pour y accéder, 2 tâches du métier, le lieu de travail.",
+  s8:"Trouve un métier où on voit surtout des hommes et un où on voit surtout des femmes. Qu'est-ce qui pourrait changer ça ?",
+  s9:"Écris 3 actions que tu peux faire dès cette semaine pour avoir un plan B de stage.",
+  s10:"Écris le message (SMS ou mail) que tu vas envoyer à la première personne de ton réseau.",
+  s11:"Écris une version courte de ta présentation (3 lignes maximum) pour un SMS à un patron.",
+  s12:"Quelle compétence veux-tu développer pendant ton prochain stage ? Comment vas-tu t'y prendre ?"
+};
+const ONISEP = '<a href="https://www.onisep.fr/metiers" target="_blank" rel="noopener">onisep.fr/metiers</a>';
+
+/* ---------- étapes ---------- */
+const STEPS = [
+  {id:"s0",t:"Avant de commencer",min:5},
+  {id:"s1",t:"Tes activités",min:10},
+  {id:"s2",t:"C'est quoi une compétence",min:20},
+  {id:"s3",t:"8 témoignages",min:25},
+  {id:"s4",t:"Le traducteur",min:20},
+  {id:"p1",t:"Pause",min:10,pause:true},
+  {id:"s5",t:"Ton inventaire",min:30},
+  {id:"s6",t:"Ce que cherchent les patrons",min:15},
+  {id:"s7",t:"Tes métiers",min:10},
+  {id:"s8",t:"Les clichés",min:15},
+  {id:"p2",t:"Pause",min:10,pause:true},
+  {id:"s9",t:"Le plan B",min:15},
+  {id:"s10",t:"Ton réseau",min:20},
+  {id:"s11",t:"Ta présentation",min:20},
+  {id:"s12",t:"Bilan",min:10},
+  {id:"s13",t:"Envoi",min:5}
+];
+
+/* ---------- état ---------- */
+const KEY="competences_cachees_3pm_v1";
+let S = {cur:0,unlocked:0,done:{},t:{},spent:{},a:{},qs:{},bonus:{},speedOk:{}};
+try{ const r=localStorage.getItem(KEY); if(r){ S=Object.assign(S,JSON.parse(r)); } }catch(e){}
+function save(){ try{ localStorage.setItem(KEY,JSON.stringify(S)); }catch(e){} }
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+function el(tag,cls,html){const e=document.createElement(tag); if(cls)e.className=cls; if(html!=null)e.innerHTML=html; return e;}
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+function A(k){return S.a[k];}
+function setA(k,v){S.a[k]=v; save();}
+
+/* qualité d'une réponse écrite */
+const JUNK=/^(jsp|je sais pas|j'?sais pas|rien|aucune idée|nul|bof|ok|non|oui|\.+|x+|a+)$/i;
+function quality(txt,min){
+  const t=(txt||"").trim();
+  if(t.length<min) return `Développe un peu plus : au moins ${min} caractères (tu en as ${t.length}).`;
+  if(JUNK.test(t)) return "Cette réponse ne compte pas. Écris une vraie phrase.";
+  if(/(.)\1{5,}/.test(t)) return "Évite de répéter la même lettre pour remplir. Écris une vraie phrase.";
+  if(min>=20 && t.split(/\s+/).filter(w=>w.length>1).length<4) return "Écris une vraie phrase, avec au moins 4 mots.";
+  return "";
+}
+
+/* ---------- points ---------- */
+function points(){
+  let p=0;
+  STEPS.forEach(s=>{ if(S.done[s.id] && !s.pause) p+=10; });
+  for(const k in S.qs){ p+=S.qs[k].score*(Q[k].pts||1); }
+  for(const k in S.bonus){ if(S.bonus[k]) p+=15; }
+  return p;
+}
+
+/* ---------- chips génériques ---------- */
+function chips(cont,list,key,opt={}){
+  cont.innerHTML="";
+  const sel=()=>A(key)||(opt.single?"":[]);
+  list.forEach(([id,label])=>{
+    const b=el("button","chip"); b.type="button"; b.textContent=label; b.dataset.id=id;
+    if(opt.sugg && opt.sugg.includes(id)) b.classList.add("sugg");
+    const upd=()=>{ const v=sel(); b.setAttribute("aria-pressed", opt.single? String(v===id) : String(v.includes(id))); };
+    upd();
+    b.onclick=()=>{
+      if(opt.single){ setA(key,id); }
+      else{ let v=[...sel()]; if(v.includes(id)) v=v.filter(x=>x!==id); else{ if(opt.max && v.length>=opt.max){ flash(cont,`Maximum ${opt.max}. Enlève d'abord un choix.`); return;} v.push(id);} setA(key,v); }
+      [...cont.children].forEach(c=>c._upd&&c._upd());
+      opt.onChange&&opt.onChange();
+    };
+    b._upd=upd; cont.appendChild(b);
+  });
+}
+function flash(cont,txt){ let m=cont.parentNode.querySelector(".flash"); if(!m){m=el("div","msg warn flash"); cont.after(m);} m.textContent=txt; clearTimeout(m._t); m._t=setTimeout(()=>m.remove(),2500); }
+
+/* ---------- quiz générique ---------- */
+function quiz(key,cont){
+  const cfg=Q[key], st=S.a["q_"+key]||(S.a["q_"+key]={}), locked=!!S.qs[key];
+  cont.innerHTML=""; cont.classList.toggle("locked",locked);
+  cfg.items.forEach((it,i)=>{
+    const box=el("div","q");
+    box.appendChild(el("div","q-text",`<span class="n">${i+1}.</span>${it.q}`));
+    const og=el("div","opts"); box.appendChild(og);
+    const ans=Array.isArray(it.a)?it.a:[it.a];
+    it.o.forEach((lab,j)=>{
+      const b=el("button","opt"); b.type="button"; b.textContent=lab;
+      const isSel=()=>cfg.multi?(st[i]||[]).includes(j):st[i]===j;
+      b.setAttribute("aria-pressed",String(isSel()));
+      if(locked){ if(ans.includes(j)) b.classList.add("right"); else if(isSel()) b.classList.add("wrong"); }
+      b.onclick=()=>{
+        if(S.qs[key]) return;
+        if(cfg.multi){ let v=[...(st[i]||[])]; if(v.includes(j)) v=v.filter(x=>x!==j); else { if(cfg.max && v.length>=cfg.max){ flash(og,`Tu ne peux en choisir que ${cfg.max}. Enlève d'abord un choix.`); return;} v.push(j);} st[i]=v; }
+        else st[i]=j;
+        save(); [...og.children].forEach((c,k)=>c.setAttribute("aria-pressed",String(cfg.multi?(st[i]||[]).includes(k):st[i]===k)));
+      };
+      og.appendChild(b);
+    });
+    if(locked){
+      const good=itemScore(cfg,it,st[i]);
+      const full=cfg.partial?good===ans.length:good===1;
+      const ex=el("div","expl"+(full?"":" bad"));
+      let txt=full?"Bien vu. ":(cfg.partial?`${good} sur ${ans.length}. `:"Pas tout à fait. ");
+      if(it.e) txt+=it.e; else if(!full) txt+="Les bonnes réponses sont entourées en vert.";
+      if(cfg.partial) txt+=" Les pros citent surtout les réponses entourées en vert, mais il n'y a pas une seule vérité.";
+      ex.innerHTML=txt; box.appendChild(ex);
+    }
+    cont.appendChild(box);
+  });
+  const bar=el("div","btns");
+  if(!locked){
+    const b=el("button","btn acc","vérifier"); b.type="button";
+    b.onclick=()=>{
+      const miss=cfg.items.filter((it,i)=>cfg.multi?!(st[i]&&st[i].length):st[i]==null).length;
+      if(miss){ showMsg(bar,`Il te manque ${miss} réponse${miss>1?"s":""}. Réponds à tout avant de vérifier.`,"err"); return; }
+      if(cfg.max){ const bad=cfg.items.filter((it,i)=>(st[i]||[]).length!==cfg.max).length; if(bad){ showMsg(bar,`Choisis exactement ${cfg.max} réponses à chaque question (${bad} question${bad>1?"s":""} à compléter).`,"err"); return; } }
+      let sc=0,tot=0; cfg.items.forEach((it,i)=>{ sc+=itemScore(cfg,it,st[i]); tot+=cfg.partial?it.a.length:1; });
+      S.qs[key]={score:sc,total:tot}; save(); quiz(key,cont); refreshTop();
+    };
+    bar.appendChild(b);
+  } else {
+    bar.appendChild(el("div","score",`Score : ${S.qs[key].score} / ${S.qs[key].total} · +${S.qs[key].score*(cfg.pts||1)} pts`.replace(/~/g,NB)));
+  }
+  cont.appendChild(bar);
+}
+function itemScore(cfg,it,v){
+  if(cfg.multi){ const s=new Set(v||[]), a=new Set(it.a);
+    if(cfg.partial) return [...s].filter(x=>a.has(x)).length;
+    return (s.size===a.size && [...s].every(x=>a.has(x)))?1:0; }
+  return v===it.a?1:0;
+}
+function showMsg(after,txt,kind){ let m=after.querySelector(".msg"); if(!m){ m=el("div","msg"); after.appendChild(m);} m.className="msg "+kind; m.innerHTML=txt.replace(/~/g,NB); }
+
+/* ---------- construction des étapes ---------- */
+function buildS0(){ chips($("#humeur"),[["fatigue","fatigué·e"],["bof","bof"],["ca_va","ça va"],["bien","bien"],["motive","motivé·e"]],"humeur",{single:true}); }
+function buildS1(){ chips($("#acts"),ACTS.map(a=>[a[0],a[1]]),"acts",{onChange:()=>{refreshCount(); }}); }
+function buildS2(){ quiz("sort",$("#q_sort")); quiz("vf2",$("#q_vf2")); }
+function buildS3(){ $("#legendAE").innerHTML=AE.map(([l,t])=>`<div><b>${l}</b><span>${t}</span></div>`).join(""); quiz("temo",$("#q_temo")); }
+function buildS4(){ quiz("trad",$("#q_trad")); }
+function myActs(){ const v=(A("acts")||[]).map(id=>[id,ACT[id].label]); if((A("act_autre")||"").trim()) v.push(["autre",A("act_autre").trim()]); return v; }
+function actLabel(id){ return id==="autre"?(A("act_autre")||"autre activité"):(ACT[id]?ACT[id].label:""); }
+function buildS5(){
+  const box=$("#inv"); box.innerHTML="";
+  const n=3;
+  for(let i=0;i<n;i++){
+    const c=el("div","card"); c.style.marginTop="14px";
+    c.innerHTML=`<h3>Activité ${i+1}</h3>
+      <label class="f">Quelle activité ?<select data-k="inv${i}_act" id="inv${i}_act"><option value="">choisis dans ta liste</option>${myActs().map(([id,l])=>`<option value="${id}">${esc(l)}</option>`).join("")}</select></label>
+      <label class="f">Ce que tu fais concrètement<span class="h">Où, quand, avec qui, comment.</span><textarea data-k="inv${i}_concret" id="inv${i}_concret" data-min="40"></textarea><div class="count" data-for="inv${i}_concret"></div></label>
+      <div class="f"><b>Les compétences que ça montre (au moins 2)</b><div class="chips" id="inv${i}_chips"></div></div>
+      <label class="f">Ta preuve : une fois précise où tu l'as fait<textarea data-k="inv${i}_preuve" id="inv${i}_preuve" data-min="30"></textarea><div class="count" data-for="inv${i}_preuve"></div></label>`.replace(/~/g,NB);
+    box.appendChild(c);
+    const sel=c.querySelector("select"); sel.value=A(`inv${i}_act`)||"";
+    const draw=()=>{ const id=sel.value; chips(c.querySelector(`#inv${i}_chips`),Object.entries(COMP),`inv${i}_comps`,{sugg:ACT[id]?ACT[id].c:[]}); };
+    sel.addEventListener("change",draw); draw();
+  }
+  restoreInputs(box); refreshCount();
+}
+function buildS6(){ quiz("met",$("#q_met")); }
+function myComps(){ const s=new Set(); for(let i=0;i<4;i++)(A(`inv${i}_comps`)||[]).forEach(c=>s.add(c)); return s; }
+function ranking(){ const m=myComps(); return METIERS.map(([n,sec,p])=>({n,sec,p,hit:p.filter(x=>m.has(x)),r:p.filter(x=>m.has(x)).length/p.length})).sort((a,b)=>b.r-a.r||b.hit.length-a.hit.length); }
+function buildS7(){
+  const r=ranking().slice(0,7);
+  $("#bars").innerHTML=r.map(x=>`<div class="barrow"><div>${esc(x.n)}<br><small>${esc(x.hit.map(c=>COMP[c].toLowerCase()).join(" · ")||"aucune compétence en commun")}</small></div><div class="track"><i style="width:${Math.round(x.r*100)}%"></i></div><div class="v">${Math.round(x.r*100)}${NB}%</div></div>`).join("");
+  fillSelect($("#s7_sect"),SECTEURS,"choisis un secteur");
+}
+function buildS8(){ quiz("cli",$("#q_cli")); }
+function buildS9(){ quiz("planb",$("#q_planb")); }
+const LIENS=["famille","ami·e","parent d'un·e ami·e","voisin·e","coach, animateur","commerçant du quartier","ancien prof, éduc","autre"];
+const AIDES=[["stage","peut me prendre en stage","--accent"],["presenter","peut me présenter quelqu'un","--ok"],["conseil","peut me conseiller","--info"],["relire","peut relire ma présentation","--muted"]];
+function buildS10(){
+  const n=Math.max(3,A("netN")||3); const box=$("#netrows"); box.innerHTML="";
+  for(let i=0;i<n;i++){
+    const r=el("div","net-row");
+    r.innerHTML=`<label class="f">Qui ?<input type="text" data-k="net${i}_qui" id="net${i}_qui" placeholder="ex. tonton Karim"></label>
+      <label class="f">Lien<select data-k="net${i}_lien" id="net${i}_lien"><option value="">choisis</option>${LIENS.map(l=>`<option>${l}</option>`).join("")}</select></label>
+      <label class="f">Son travail<input type="text" data-k="net${i}_job" id="net${i}_job" placeholder="ex. carrossier"></label>
+      <label class="f">Il ou elle peut<select data-k="net${i}_aide" id="net${i}_aide"><option value="">choisis</option>${AIDES.map(a=>`<option value="${a[0]}">${a[1].replace("peut ","")}</option>`).join("")}</select></label>`.replace(/~/g,NB);
+    box.appendChild(r);
+  }
+  restoreInputs(box); drawNet();
+}
+function drawNet(){
+  const n=Math.max(3,A("netN")||3), ppl=[];
+  for(let i=0;i<n;i++){ const q=(A(`net${i}_qui`)||"").trim(); if(q) ppl.push({q,job:(A(`net${i}_job`)||"").trim(),aide:A(`net${i}_aide`)||""}); }
+  const W=560,H=340,cx=W/2,cy=H/2, col=a=>{const f=AIDES.find(x=>x[0]===a); return f?`var(${f[2]})`:"var(--line)";};
+  let svg=`<svg class="netsvg" viewBox="0 0 ${W} ${H}" role="img" aria-label="carte de ton réseau">`;
+  ppl.forEach((p,i)=>{ const ang=-Math.PI/2+i*2*Math.PI/Math.max(ppl.length,1); p.x=cx+Math.cos(ang)*200; p.y=cy+Math.sin(ang)*120;
+    svg+=`<line x1="${cx}" y1="${cy}" x2="${p.x}" y2="${p.y}" style="stroke:${col(p.aide)};stroke-width:3"/>`; });
+  svg+=`<circle cx="${cx}" cy="${cy}" r="34" style="fill:var(--ink)"/><text x="${cx}" y="${cy+6}" text-anchor="middle" font-weight="800" font-size="18" style="fill:var(--paper);font-family:var(--f-display)">moi</text>`;
+  ppl.forEach(p=>{ const nm=p.q.length>16?p.q.slice(0,15)+"…":p.q, jb=p.job.length>18?p.job.slice(0,17)+"…":p.job;
+    svg+=`<circle cx="${p.x}" cy="${p.y}" r="12" style="fill:${col(p.aide)}"/>
+    <text x="${p.x}" y="${p.y-18}" text-anchor="middle" font-size="17" font-weight="700" style="fill:var(--ink);font-family:var(--f-body)">${esc(nm)}</text>
+    <text x="${p.x}" y="${p.y+30}" text-anchor="middle" font-size="15" style="fill:var(--muted);font-family:var(--f-body)">${esc(jb)}</text>`; });
+  if(!ppl.length) svg+=`<text x="${cx}" y="${cy+70}" text-anchor="middle" font-size="14" style="fill:var(--muted)">Ajoute des personnes au-dessus : elles apparaîtront ici.</text>`.replace(/~/g,NB);
+  svg+="</svg>";
+  $("#netmap").innerHTML=svg+`<div class="netleg">${AIDES.map(a=>`<span><i style="background:var(${a[2]})"></i>${a[1]}</span>`).join("")}</div>`;
+}
+function fillSelect(sel,list,ph){ const v=A(sel.dataset.k)||""; sel.innerHTML=`<option value="">${ph}</option>`+list.map(x=>Array.isArray(x)?`<option value="${esc(x[0])}">${esc(x[1])}</option>`:`<option>${esc(x)}</option>`).join(""); sel.value=v; }
+function buildS11(){
+  fillSelect($("#pr_secteur"),SECTEURS,"choisis");
+  if(!A("pr_secteur") && A("s7_sect")){ setA("pr_secteur",A("s7_sect")); $("#pr_secteur").value=A("s7_sect"); }
+  fillSelect($("#pr_act"),myActs(),"choisis");
+  fillSelect($("#pr_comp"),Object.entries(COMP),"choisis");
+  fillSelect($("#pr_q1"),QUALS,"choisis"); fillSelect($("#pr_q2"),QUALS,"choisis");
+  drawPreview();
+}
+function lowerFirst(s){ return s? s.charAt(0).toLowerCase()+s.slice(1):s; }
+function presentation(blank){
+  const B=(v,ph)=>v?esc(v):(blank?`<span class="blank">${ph}</span>`:`[${ph}]`);
+  let act=A("pr_act")?lowerFirst(actLabel(A("pr_act"))):"";
+  act=act.replace(/^s'/,"m'");
+  const comp=A("pr_comp")?lowerFirst(COMP[A("pr_comp")]):"";
+  const sect=A("pr_secteur")?lowerFirst(A("pr_secteur")):"";
+  return `Bonjour, je m'appelle ${B(A("prenom"),"prénom")}, je suis en 3e prépa métiers au collège ${B(A("pr_college"),"collège")}. Je cherche un stage dans le secteur ${B(sect,"secteur")} parce que ${B(lowerFirst((A("pr_pourquoi")||"").trim()),"raison")}. En dehors du collège, j'aime ${B(act,"activité")}, ce qui m'a appris à ${B(comp,"compétence")}. Je suis ${B(A("pr_q1"),"qualité")} et ${B(A("pr_q2"),"qualité")}. Je suis disponible pour un stage ${B(A("pr_dates"),"dates")}. Merci de votre attention.`;
+}
+function drawPreview(){ $("#preview").innerHTML=presentation(true); }
+function buildS12(){
+  chips($("#sure"),Object.entries(COMP),"sure",{max:3});
+  chips($("#note"),[["1","pas du tout"],["2","un peu"],["3","moyennement"],["4","oui"],["5","beaucoup"]],"note",{single:true});
+}
+function buildS13(){
+  $("#recap").textContent=recap();
+  updateMail();
+  const left=STEPS.filter(s=>DEFIS[s.id] && !S.bonus[s.id]);
+  const box=$("#defisleft");
+  if(left.length){
+    box.innerHTML=`<h3>Il te reste du temps ? ${left.length} défi${left.length>1?"s":""} bonus à faire</h3><p class="hint">Chaque défi rapporte 15 points. Clique pour y aller, puis reviens ici et recopie ton travail.</p><div class="chips">${left.map(s=>`<button class="chip" type="button" data-go="${s.id}">${esc(s.t)}</button>`).join("")}</div>`.replace(/~/g,NB);
+    box.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>{ go(STEPS.findIndex(s=>s.id===b.dataset.go)); setTimeout(()=>{const d=document.querySelector(`section[data-id="${b.dataset.go}"] details.defi`); if(d){d.open=true; d.scrollIntoView({behavior:"smooth",block:"center"});}},50); });
+  } else box.innerHTML=`<h3>Tous les défis sont faits.</h3><p>Bravo pour le travail. Tu peux aider ta prof ou relire ton texte de présentation.</p>`;
+}
+const BUILD={s0:buildS0,s1:buildS1,s2:buildS2,s3:buildS3,s4:buildS4,s5:buildS5,s6:buildS6,s7:buildS7,s8:buildS8,s9:buildS9,s10:buildS10,s11:buildS11,s12:buildS12,s13:buildS13};
+
+/* ---------- validations ---------- */
+function needText(list){ for(const [k,min,lab] of list){ const q=quality(A(k),min); if(q) return `<b>${lab} :</b> ${q}`; } return ""; }
+const VALID={
+  s0:()=>{ if(!(A("prenom")||"").trim()) return "Écris ton prénom."; if(!A("humeur")) return "Choisis ton humeur."; return needText([["s0_def",15,"Ta définition"]]); },
+  s1:()=>{ const n=(A("acts")||[]).length; if(n<5) return `Choisis au moins 5 activités (tu en as ${n}).`; if(!A("heures")) return "Indique le nombre d'heures par semaine."; return ""; },
+  s2:()=>{ if(!S.qs.sort) return "Termine et vérifie le classement (consigne 1)."; if(!S.qs.vf2) return "Termine et vérifie le vrai ou faux (consigne 2)."; return ""; },
+  s3:()=>{ if(!S.qs.temo) return "Associe les 8 témoignages puis clique sur « vérifier »."; return needText([["s3_proche",25,"Le jeune qui te ressemble"]]); },
+  s4:()=>{ if(!S.qs.trad) return "Termine et vérifie le traducteur."; return needText([["s4_moi",30,"Ta phrase"]]); },
+  s5:()=>{ const used=[]; for(let i=0;i<3;i++){ const a=A(`inv${i}_act`); if(!a) return `Activité ${i+1} : choisis une activité.`; if(used.includes(a)) return `Activité ${i+1} : tu as déjà choisi cette activité. Prends-en une autre.`; used.push(a);
+      const t=needText([[`inv${i}_concret`,40,`Activité ${i+1}, concrètement`]]); if(t) return t;
+      if((A(`inv${i}_comps`)||[]).length<2) return `Activité ${i+1} : choisis au moins 2 compétences.`;
+      const p=needText([[`inv${i}_preuve`,30,`Activité ${i+1}, ta preuve`]]); if(p) return p; } return ""; },
+  s6:()=> S.qs.met?"":"Choisis 3 compétences par métier puis clique sur « vérifier ».",
+  s7:()=>{ const t=needText([["s7_why",30,"Ton avis sur le classement"]]); if(t) return t; if(!A("s7_sect")) return "Choisis un secteur."; return ""; },
+  s8:()=>{ if(!S.qs.cli) return "Réponds au vrai ou faux puis vérifie."; return needText([["s8_cliche",25,"Ton cliché"]]); },
+  s9:()=>{ if(!S.qs.planb) return "Réponds aux 3 situations puis vérifie."; return needText([["s9_planb",30,"Ton plan B"]]); },
+  s10:()=>{ const n=Math.max(3,A("netN")||3); let ok=0; for(let i=0;i<n;i++){ if((A(`net${i}_qui`)||"").trim() && A(`net${i}_lien`) && A(`net${i}_aide`)) ok++; }
+      if(ok<3) return `Complète au moins 3 personnes (qui, lien, aide). Tu en as ${ok}.`; return needText([["s10_first",25,"Ton premier contact"]]); },
+  s11:()=>{ const f=[["pr_college","le collège"],["pr_secteur","le secteur"],["pr_act","l'activité"],["pr_comp","ce qu'elle t'a appris"],["pr_q1","la première qualité"],["pr_q2","la deuxième qualité"],["pr_dates","les dates"]];
+      for(const [k,l] of f) if(!(A(k)||"").toString().trim()) return `Il manque ${l}.`;
+      if(A("pr_q1")===A("pr_q2")) return "Choisis 2 qualités différentes.";
+      return needText([["pr_pourquoi",15,"Pourquoi ce secteur"]]); },
+  s12:()=>{ const t=needText([["s12_def",25,"Ta nouvelle définition"]]); if(t) return t; if((A("sure")||[]).length!==3) return "Choisis exactement 3 compétences."; const a=needText([["s12_appris",20,"Ce que tu as appris"]]); if(a) return a; if(!A("note")) return "Dis si la séance t'a servi."; return ""; },
+  s13:()=> A("sent")?"":"Envoie ton travail puis coche la case « J'ai envoyé mon travail »."
+};
+
+/* ---------- navigation ---------- */
+function go(i){
+  i=Math.max(0,Math.min(i,S.unlocked)); S.cur=i; save();
+  const s=STEPS[i];
+  $$("section.step").forEach(x=>x.hidden=x.dataset.id!==s.id);
+  if(!S.t[s.id]) { S.t[s.id]=Date.now(); save(); }
+  if(BUILD[s.id]) BUILD[s.id]();
+  const sec=$(`section[data-id="${s.id}"]`);
+  restoreInputs(sec);
+  renderMeta(sec,s,i); renderFoot(s,i); refreshTop(); refreshCount();
+  window.scrollTo({top:0,behavior:"auto"});
+}
+function renderMeta(sec,s,i){
+  const m=sec.querySelector(".meta"); if(!m) return;
+  const num=STEPS.slice(0,i+1).filter(x=>!x.pause).length, tot=STEPS.filter(x=>!x.pause).length;
+  m.innerHTML=`<span><b>étape ${num} / ${tot}</b></span><span>temps prévu : ${s.min}${NB}min</span><span class="timer" data-timer="${s.id}"></span>`.replace(/~/g,NB);
+  tick();
+}
+function tick(){ $$("[data-timer]").forEach(t=>{ const id=t.dataset.timer; const sec=S.spent[id]!=null?S.spent[id]:Math.round((Date.now()-(S.t[id]||Date.now()))/1000); t.textContent=`tu y es depuis${NB}: ${Math.floor(sec/60)}${NB}min`; }); }
+setInterval(tick,20000);
+
+function renderFoot(s,i){
+  const f=$("#foot"); f.innerHTML="";
+  if(DEFIS[s.id]){
+    const won=!!S.bonus[s.id];
+    const d=el("details","defi"+(won?" won":""));
+    d.innerHTML=`<summary><span class="plus">${won?"gagné":"+15 pts"}</span> défi bonus : tu as fini ? Ce défi est pour toi.</summary>
+      <div class="in"><p>${DEFIS[s.id]}${s.id==="s7"?" Site : "+ONISEP:""}</p>
+      <textarea id="defi_${s.id}" data-k="defi_${s.id}" data-min="40"></textarea><div class="count" data-for="defi_${s.id}"></div>
+      <div class="btns"><button type="button" class="btn acc small">valider le défi</button></div></div>`.replace(/~/g,NB);
+    f.appendChild(d); restoreInputs(d);
+    d.querySelector("button").onclick=()=>{ const q=quality(A("defi_"+s.id),40); const bx=d.querySelector(".btns");
+      if(q){ showMsg(bx,q,"err"); return; } S.bonus[s.id]=true; save(); d.classList.add("won"); d.querySelector(".plus").textContent="gagné"; showMsg(bx,"Défi validé : +15 pts. Tu peux encore l'améliorer, il sera envoyé à ta prof.","good"); refreshTop(); };
+  }
+  const box=el("div","card");
+  const bar=el("div","btns");
+  if(i>0){ const p=el("button","btn ghost","← étape précédente"); p.type="button"; p.onclick=()=>go(i-1); bar.appendChild(p); }
+  if(s.pause){
+    const n=el("button","btn acc","je suis de retour →"); n.type="button";
+    n.onclick=()=>{ S.done[s.id]=true; S.unlocked=Math.max(S.unlocked,i+1); save(); go(i+1); }; bar.appendChild(n);
+  } else if(i<STEPS.length-1){
+    const v=el("button","btn acc",S.done[s.id]?"étape suivante →":"valider l'étape"); v.type="button";
+    v.onclick=()=>validate(s,i,box); bar.appendChild(v);
+  } else {
+    const v=el("button","btn acc",S.done[s.id]?"travail terminé":"terminer la séance"); v.type="button";
+    v.onclick=()=>validate(s,i,box); bar.appendChild(v);
+  }
+  box.appendChild(bar); f.appendChild(box);
+}
+function validate(s,i,box){
+  const err=VALID[s.id]?VALID[s.id]():"";
+  if(err){ showMsg(box,err,"err"); return; }
+  const el_=Math.round((Date.now()-(S.t[s.id]||Date.now()))/1000);
+  if(!S.done[s.id] && !S.speedOk[s.id] && el_<s.min*60*0.3){
+    showMsg(box,`<b>Tu vas très vite (${Math.max(1,Math.round(el_/60))}${NB}min sur ${s.min} prévues).</b> Relis tes réponses : est-ce qu'une personne qui ne te connaît pas comprendrait ? Tu peux aussi faire le défi bonus.<div class="btns" style="margin-top:8px"><button class="btn small" type="button" id="relu">j'ai relu, je valide</button></div>`,"warn");
+    box.querySelector("#relu").onclick=()=>{ S.speedOk[s.id]=true; save(); validate(s,i,box); };
+    return;
+  }
+  if(!S.done[s.id]){ S.done[s.id]=true; S.spent[s.id]=el_; }
+  S.unlocked=Math.max(S.unlocked,Math.min(i+1,STEPS.length-1)); save(); refreshTop();
+  if(i<STEPS.length-1) go(i+1);
+  else showMsg(box,`Séance terminée, ${esc(A("prenom")||"")}. Total : ${points()} points. Merci pour ton travail.`,"good");
+}
+
+/* ---------- haut de page ---------- */
+function refreshTop(){
+  $("#pts").textContent=points()+" pts";
+  $("#who").textContent=(A("prenom")?A("prenom")+" · ":"")+"3e prépa métiers";
+  const real=STEPS.filter(s=>!s.pause), d=real.filter(s=>S.done[s.id]).length;
+  $("#progbar").style.width=Math.round(d/real.length*100)+"%";
+  const nav=$("#nav"); nav.innerHTML="";
+  let n=0;
+  STEPS.forEach((s,i)=>{ const b=el("button",(s.pause?"pause ":"")+(S.done[s.id]?"done ":"")+(i===S.cur?"cur":""), s.pause?"pause":String(++n)); b.type="button"; b.title=s.t; b.disabled=i>S.unlocked; b.onclick=()=>go(i); nav.appendChild(b); });
+  const c=nav.children[S.cur]; if(c) c.scrollIntoView({block:"nearest",inline:"center"});
+}
+
+/* ---------- champs ---------- */
+function restoreInputs(root){
+  root.querySelectorAll("[data-k]").forEach(e=>{ const v=A(e.dataset.k); if(e.type==="checkbox") e.checked=!!v; else if(v!=null && e.value!==v) e.value=v; });
+}
+function refreshCount(){
+  $$(".count").forEach(c=>{ const k=c.dataset.for, inp=document.getElementById(k); if(!inp) return; const min=+inp.dataset.min||0, n=(inp.value||"").trim().length;
+    c.textContent=`${n} / ${min} caractères minimum`; c.classList.toggle("ok",n>=min); });
+}
+document.addEventListener("input",e=>{
+  const t=e.target; if(!t.dataset||!t.dataset.k) return;
+  setA(t.dataset.k, t.type==="checkbox"?t.checked:t.value);
+  refreshCount();
+  if(t.dataset.k==="prenom") refreshTop();
+  if(/^net\d/.test(t.dataset.k)) drawNet();
+  if(/^pr_|^prenom/.test(t.dataset.k) && $("#preview")) drawPreview();
+  if(t.dataset.k==="profmail") updateMail();
+});
+document.addEventListener("change",e=>{ const t=e.target; if(t.tagName==="SELECT" && t.dataset.k){ setA(t.dataset.k,t.value); if(/^net\d/.test(t.dataset.k)) drawNet(); if(/^pr_/.test(t.dataset.k)) drawPreview(); } });
+$("#addnet").onclick=()=>{ const n=Math.max(3,A("netN")||3); if(n>=10) return; setA("netN",n+1); buildS10(); };
+
+/* ---------- récapitulatif ---------- */
+function recap(){
+  const L=[]; const line=(t="")=>L.push(t); const sec=t=>{ line(); line("== "+t+" =="); };
+  const qs=k=>S.qs[k]?`${S.qs[k].score}/${S.qs[k].total}`:"non fait";
+  const mins=id=>S.spent[id]!=null?` (${Math.round(S.spent[id]/60)} min)`:"";
+  line("Compétences cachées – 3e prépa métiers");
+  line(`Élève : ${A("prenom")||"?"}   Date : ${new Date().toLocaleDateString("fr-FR")}   Points : ${points()}`);
+  line(`Étapes terminées : ${STEPS.filter(s=>!s.pause && S.done[s.id]).length}/${STEPS.filter(s=>!s.pause).length}   Défis bonus : ${Object.values(S.bonus).filter(Boolean).length}`);
+  sec("1. Avant de commencer"+mins("s0")); line("Humeur : "+(({fatigue:"fatigué·e",bof:"bof",ca_va:"ça va",bien:"bien",motive:"motivé·e"})[A("humeur")]||"-")); line("Définition de départ : "+(A("s0_def")||"-"));
+  sec("2. Activités"+mins("s1")); line((A("acts")||[]).map(id=>"- "+ACT[id].label).join("\n")||"-"); if(A("act_autre")) line("- autre : "+A("act_autre")); line("Heures / semaine : "+(A("heures")||"-"));
+  sec("3. C'est quoi une compétence"+mins("s2")); line("Classement savoir / savoir-faire / savoir-être : "+qs("sort")); line("Vrai ou faux : "+qs("vf2"));
+  sec("4. Témoignages"+mins("s3")); line("Associations : "+qs("temo")); line("Le jeune qui me ressemble : "+(A("s3_proche")||"-"));
+  sec("5. Traducteur"+mins("s4")); line("Score : "+qs("trad")); line("Ma phrase : "+(A("s4_moi")||"-"));
+  sec("6. Inventaire"+mins("s5"));
+  for(let i=0;i<3;i++){ line(`Activité ${i+1} : ${actLabel(A(`inv${i}_act`))||"-"}`); line("  Concrètement : "+(A(`inv${i}_concret`)||"-")); line("  Compétences : "+((A(`inv${i}_comps`)||[]).map(c=>COMP[c]).join(", ")||"-")); line("  Preuve : "+(A(`inv${i}_preuve`)||"-")); }
+  sec("7. Ce que cherchent les patrons"+mins("s6")); line("Score : "+qs("met"));
+  sec("8. Mes métiers"+mins("s7")); ranking().slice(0,3).forEach((r,i)=>line(`${i+1}. ${r.n} (${Math.round(r.r*100)} %)`)); line("Mon avis : "+(A("s7_why")||"-")); line("Secteur visé : "+(A("s7_sect")||"-"));
+  sec("9. Clichés"+mins("s8")); line("Score : "+qs("cli")); line("Mon cliché : "+(A("s8_cliche")||"-"));
+  sec("10. Plan B"+mins("s9")); line("Score : "+qs("planb")); line("Mon plan B : "+(A("s9_planb")||"-"));
+  sec("11. Réseau"+mins("s10")); const n=Math.max(3,A("netN")||3); for(let i=0;i<n;i++){ const q=A(`net${i}_qui`); if(q) line(`- ${q} (${A(`net${i}_lien`)||"?"}, ${A(`net${i}_job`)||"?"}) : ${(AIDES.find(a=>a[0]===A(`net${i}_aide`))||[0,"?"])[1]}`); } line("Premier contact : "+(A("s10_first")||"-"));
+  sec("12. Présentation"+mins("s11")); line(presentation(false));
+  sec("13. Bilan"+mins("s12")); line("Nouvelle définition : "+(A("s12_def")||"-")); line("Mes 3 compétences sûres : "+((A("sure")||[]).map(c=>COMP[c]).join(", ")||"-")); line("Appris sur moi : "+(A("s12_appris")||"-")); line("Séance utile (1 à 5) : "+(A("note")||"-")); if(A("s12_q")) line("Question pour la prof : "+A("s12_q"));
+  const df=Object.keys(DEFIS).filter(k=>(A("defi_"+k)||"").trim());
+  if(df.length){ sec("Défis bonus"); df.forEach(k=>{ line(`[${STEPS.find(s=>s.id===k).t}]${S.bonus[k]?" validé":" non validé"}`); line("  Défi : "+DEFIS[k].replace(/~/g,"")); line("  Réponse : "+A("defi_"+k)); }); }
+  return L.join("\n").replace(/~/g,NB);
+}
+function updateMail(){
+  const to=(A("profmail")||"").trim();
+  const subj=`Compétences cachées – ${A("prenom")||"élève"}`;
+  $("#mailBtn").href=`mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(recap())}`;
+}
+$("#copyBtn").onclick=()=>{
+  const txt=recap(); $("#recap").textContent=txt;
+  const ok=()=>showMsg($("#sendmsg"),"Copié. Ouvre ta messagerie (ou l'ENT), écris à ta prof, puis colle avec Ctrl + V.","good");
+  const fallback=()=>{ const r=document.createRange(); r.selectNodeContents($("#recap")); const s=getSelection(); s.removeAllRanges(); s.addRange(r); try{ document.execCommand("copy"); ok(); }catch(e){ showMsg($("#sendmsg"),"Le texte est sélectionné : fais Ctrl + C pour le copier.","warn"); } };
+  if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(ok,fallback); else fallback();
+};
+/* téléchargement : capacité de l'artifact, ou fichier local */
+let DL=null;
+(async()=>{
+  if(window.self!==window.top){ for(let k=0;k<20 && !(window.claude&&window.claude.use);k++) await new Promise(r=>setTimeout(r,250));
+    if(window.claude&&window.claude.use){ try{ DL=await window.claude.use("downloads"); }catch(e){ DL=null; } } if(DL) $("#dlBtn").hidden=false; }
+  else { $("#dlBtn").hidden=false; }
+})();
+$("#dlBtn").onclick=async()=>{
+  const name=`competences_cachees_${(A("prenom")||"eleve").replace(/[^a-zA-Z0-9À-ÿ_-]/g,"_")}.txt`, data=recap();
+  if(DL){ try{ await DL.save({filename:name,data}); showMsg($("#sendmsg"),"Fichier enregistré. Envoie-le à ta prof en pièce jointe.","good"); }catch(e){ if(e&&e.code!=="declined") showMsg($("#sendmsg"),"Téléchargement impossible ici. Utilise « copier mon travail ».","warn"); } return; }
+  try{ const u=URL.createObjectURL(new Blob([data],{type:"text/plain;charset=utf-8"})); const a=document.createElement("a"); a.href=u; a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(u),2000); showMsg($("#sendmsg"),"Fichier enregistré dans tes téléchargements. Envoie-le à ta prof en pièce jointe.","good"); }catch(e){ showMsg($("#sendmsg"),"Téléchargement impossible. Utilise « copier mon travail ».","warn"); }
+};
+
+/* ---------- nouvel élève ---------- */
+function freshState(){ return {cur:0,unlocked:0,done:{},t:{},spent:{},a:{},qs:{},bonus:{},speedOk:{}}; }
+function askReset(){
+  const box=$("#resetBox"), nom=A("prenom")?esc(A("prenom")):"l'élève précédent";
+  const nonEnvoye=A("prenom") && !A("sent");
+  box.innerHTML=`<div class="msg ${nonEnvoye?"err":"warn"}"><b>Effacer tout le travail de ${nom}${NB}?</b> ${nonEnvoye?"Attention : ce travail n'a pas été envoyé à la prof. ":""}On ne pourra pas le récupérer.
+    <div class="btns" style="margin-top:10px"><button type="button" class="btn small" id="resetYes">oui, tout effacer</button><button type="button" class="btn ghost small" id="resetNo">annuler</button></div></div>`;
+  box.hidden=false;
+  $("#resetNo").onclick=()=>{ box.hidden=true; };
+  $("#resetYes").onclick=doReset;
+}
+function doReset(){
+  S=freshState();
+  try{ localStorage.removeItem(KEY); }catch(e){}
+  $$("[data-k]").forEach(e=>{ if(e.type==="checkbox") e.checked=false; else e.value=""; });
+  $("#resetBox").hidden=true; $("#otherBanner").hidden=true;
+  $("#sendmsg") && ($("#sendmsg").innerHTML="");
+  go(0); refreshTop();
+  setTimeout(()=>{ const p=$("#prenom"); if(p) p.focus(); },50);
+}
+$("#resetBtn").onclick=askReset;
+function showOtherBanner(){
+  const b=$("#otherBanner");
+  if(A("prenom") && (S.unlocked>0 || S.cur>0)){
+    b.innerHTML=`Ce travail appartient à <b>${esc(A("prenom"))}</b>. Ce n'est pas toi${NB}? <button type="button" class="btn small" id="bannerReset" style="margin-left:6px">je commence à zéro</button> <button type="button" class="btn ghost small" id="bannerOk">c'est moi</button>`;
+    b.hidden=false;
+    $("#bannerReset").onclick=()=>{ b.hidden=true; askReset(); window.scrollTo({top:0}); };
+    $("#bannerOk").onclick=()=>{ b.hidden=true; };
+  }
+}
+
+/* ---------- démarrage ---------- */
+go(Math.min(S.cur||0,S.unlocked||0));
+showOtherBanner();
+</script>
